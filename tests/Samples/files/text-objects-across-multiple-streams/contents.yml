@@ -358,25 +358,21 @@ pages:
       -RS422 OUT -RS422 OUT
       +RS422 IN +RS422 IN
       -RS485 -RS485
-      CH1
-      CH1
       +RS422 OUT +RS422 OUT
-      RS-422
-      RS-422
       -RS422 IN -RS422 IN
       RS232 IN RS232 OUT RS232 IN RS232 OUT
       CH1 CH1 CH1 CH1
+      CH4 CH3 CH2 CH1
+      RS-422 RS-422 RS-422 RS-422
+      CH4 CH3 CH2 CH1
+      RS-422 RS-422 RS-422 RS-422
       GND GND GND GND
       +RS485 +RS485
       -RS422 OUT -RS422 OUT
       +RS422 IN +RS422 IN
       -RS485 -RS485
-      CH2
-      CH2
       +RS422 OUT +RS422 OUT
       -RS422 IN -RS422 IN
-      RS-422
-      RS-422
       RS232 IN RS232 OUT RS232 IN RS232 OUT
       CH2 CH2 CH2 CH2
       GND GND GND GND
@@ -384,11 +380,7 @@ pages:
       -RS422 OUT -RS422 OUT
       +RS422 IN +RS422 IN
       -RS485 -RS485
-      CH3
-      CH3
       +RS422 OUT +RS422 OUT
-      RS-422
-      RS-422
       -RS422 IN -RS422 IN
       RS232 IN RS232 OUT RS232 IN RS232 OUT
       CH3 CH3 CH3 CH3
@@ -398,12 +390,8 @@ pages:
       +RS422 IN +RS422 IN
       1 2 3 4 5
       -RS485 -RS485
-      CH4
-      CH4
       GND - RX +TX --- ---
       +RS422 OUT +RS422 OUT
-      RS-422
-      RS-422
       -RS422 IN -RS422 IN
       6 7 8 9
       --- +RX -TX ---
@@ -431,25 +419,21 @@ pages:
       **-RS422 OUT -RS422 OUT**
       **+RS422 IN +RS422 IN**
       **-RS485 -RS485**
-      **CH1**
-      **CH1**
       **+RS422 OUT +RS422 OUT**
-      **RS-422**
-      **RS-422**
       **-RS422 IN -RS422 IN**
       **RS232 IN RS232 OUT RS232 IN RS232 OUT**
       **CH1 CH1 CH1 CH1**
+      **CH4 CH3 CH2 CH1**
+      **RS-422 RS-422 RS-422 RS-422**
+      **CH4 CH3 CH2 CH1**
+      **RS-422 RS-422 RS-422 RS-422**
       **GND GND GND GND**
       **+RS485 +RS485**
       **-RS422 OUT -RS422 OUT**
       **+RS422 IN +RS422 IN**
       **-RS485 -RS485**
-      **CH2**
-      **CH2**
       **+RS422 OUT +RS422 OUT**
       **-RS422 IN -RS422 IN**
-      **RS-422**
-      **RS-422**
       **RS232 IN RS232 OUT RS232 IN RS232 OUT**
       **CH2 CH2 CH2 CH2**
       **GND GND GND GND**
@@ -457,11 +441,7 @@ pages:
       **-RS422 OUT -RS422 OUT**
       **+RS422 IN +RS422 IN**
       **-RS485 -RS485**
-      **CH3**
-      **CH3**
       **+RS422 OUT +RS422 OUT**
-      **RS-422**
-      **RS-422**
       **-RS422 IN -RS422 IN**
       **RS232 IN RS232 OUT RS232 IN RS232 OUT**
       **CH3 CH3 CH3 CH3**
@@ -471,12 +451,8 @@ pages:
       **+RS422 IN +RS422 IN**
       **1 2 3 4 5**
       **-RS485 -RS485**
-      **CH4**
-      **CH4**
       **GND - RX +TX --- ---**
       **+RS422 OUT +RS422 OUT**
-      **RS-422**
-      **RS-422**
       **-RS422 IN -RS422 IN**
       **6 7 8 9**
       **--- +RX -TX ---**
@@ -596,25 +572,21 @@ pages:
       -RS422 OUT -RS422 OUT
       +RS422 IN +RS422 IN
       -RS485 -RS485
-      CH1
-      CH1
       +RS422 OUT +RS422 OUT
-      RS-422
-      RS-422
       -RS422 IN -RS422 IN
       RS232 IN RS232 OUT RS232 IN RS232 OUT
       CH1 CH1 CH1 CH1
+      CH4 CH3 CH2 CH1
+      RS-422 RS-422 RS-422 RS-422
+      CH4 CH3 CH2 CH1
+      RS-422 RS-422 RS-422 RS-422
       GND GND GND GND
       +RS485 +RS485
       -RS422 OUT -RS422 OUT
       +RS422 IN +RS422 IN
       -RS485 -RS485
-      CH2
-      CH2
       +RS422 OUT +RS422 OUT
       -RS422 IN -RS422 IN
-      RS-422
-      RS-422
       RS232 IN RS232 OUT RS232 IN RS232 OUT
       CH2 CH2 CH2 CH2
       GND GND GND GND
@@ -622,11 +594,7 @@ pages:
       -RS422 OUT -RS422 OUT
       +RS422 IN +RS422 IN
       -RS485 -RS485
-      CH3
-      CH3
       +RS422 OUT +RS422 OUT
-      RS-422
-      RS-422
       -RS422 IN -RS422 IN
       RS232 IN RS232 OUT RS232 IN RS232 OUT
       CH3 CH3 CH3 CH3
@@ -636,12 +604,8 @@ pages:
       +RS422 IN +RS422 IN
       1 2 3 4 5
       -RS485 -RS485
-      CH4
-      CH4
       GND - RX +TX --- ---
       +RS422 OUT +RS422 OUT
-      RS-422
-      RS-422
       -RS422 IN -RS422 IN
       6 7 8 9
       --- +RX -TX ---
@@ -672,25 +636,21 @@ pages:
       **-RS422 OUT -RS422 OUT**
       **+RS422 IN +RS422 IN**
       **-RS485 -RS485**
-      **CH1**
-      **CH1**
       **+RS422 OUT +RS422 OUT**
-      **RS-422**
-      **RS-422**
       **-RS422 IN -RS422 IN**
       **RS232 IN RS232 OUT RS232 IN RS232 OUT**
       **CH1 CH1 CH1 CH1**
+      **CH4 CH3 CH2 CH1**
+      **RS-422 RS-422 RS-422 RS-422**
+      **CH4 CH3 CH2 CH1**
+      **RS-422 RS-422 RS-422 RS-422**
       **GND GND GND GND**
       **+RS485 +RS485**
       **-RS422 OUT -RS422 OUT**
       **+RS422 IN +RS422 IN**
       **-RS485 -RS485**
-      **CH2**
-      **CH2**
       **+RS422 OUT +RS422 OUT**
       **-RS422 IN -RS422 IN**
-      **RS-422**
-      **RS-422**
       **RS232 IN RS232 OUT RS232 IN RS232 OUT**
       **CH2 CH2 CH2 CH2**
       **GND GND GND GND**
@@ -698,11 +658,7 @@ pages:
       **-RS422 OUT -RS422 OUT**
       **+RS422 IN +RS422 IN**
       **-RS485 -RS485**
-      **CH3**
-      **CH3**
       **+RS422 OUT +RS422 OUT**
-      **RS-422**
-      **RS-422**
       **-RS422 IN -RS422 IN**
       **RS232 IN RS232 OUT RS232 IN RS232 OUT**
       **CH3 CH3 CH3 CH3**
@@ -712,12 +668,8 @@ pages:
       **+RS422 IN +RS422 IN**
       **1 2 3 4 5**
       **-RS485 -RS485**
-      **CH4**
-      **CH4**
       **GND - RX +TX --- ---**
       **+RS422 OUT +RS422 OUT**
-      **RS-422**
-      **RS-422**
       **-RS422 IN -RS422 IN**
       **6 7 8 9**
       **--- +RX -TX ---**

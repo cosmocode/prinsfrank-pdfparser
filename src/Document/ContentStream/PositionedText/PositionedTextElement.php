@@ -62,8 +62,8 @@ readonly class PositionedTextElement {
     }
 
     public function getHeight(): float {
-        return ($this->textState->getFontSize())
-            * abs($this->absoluteMatrix->scaleY)
+        return $this->textState->getFontSize()
+            * hypot($this->absoluteMatrix->shearY, $this->absoluteMatrix->scaleY) // Length of the glyph's vertical axis: its extent perpendicular to the baseline
             * ($this->textState->scale / 100);
     }
 
