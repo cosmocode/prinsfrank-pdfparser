@@ -82,11 +82,13 @@ readonly class ContentStream {
     /** @throws PdfParserException */
     public function getText(Document $document, Page $page, LineGroupingStrategy $lineGroupingStrategy): string {
         $text = '';
-        foreach ($lineGroupingStrategy->group($this->getPositionedTextElements()) as $i => $positionedTextElementsForLine) {
-            if ($i !== 0) {
+        $isFirstLine = true;
+        foreach ($lineGroupingStrategy->group($this->getPositionedTextElements()) as $positionedTextElementsForLine) {
+            if (!$isFirstLine) {
                 $text .= "\n";
             }
 
+            $isFirstLine = false;
             $previousTextElementOnLine = null;
             foreach ($positionedTextElementsForLine as $positionedTextElement) {
                 $elementText = $positionedTextElement->getText($document, $page);
@@ -95,23 +97,13 @@ readonly class ContentStream {
                     continue;
                 }
 
-                if ($previousTextElementOnLine !== null) {
-                    $gap = $positionedTextElement->absoluteMatrix->offsetX
-                        - $previousTextElementOnLine->absoluteMatrix->offsetX
-                        - $previousTextElementOnLine->getAdvanceWidth($document, $page);
-
-                    $wordBreakThreshold = ($previousTextElementOnLine->textState->fontSize ?? 10)
-                        * $previousTextElementOnLine->absoluteMatrix->scaleX
-                        * ($previousTextElementOnLine->textState->scale / 100)
-                        * self::WORD_BREAK_THRESHOLD;
-
-                    if (
-                        $gap >= $wordBreakThreshold
-                        && str_ends_with($text, ' ') === false
-                        && str_starts_with($elementText, ' ') === false
-                    ) {
-                        $text .= ' ';
-                    }
+                if (
+                    $previousTextElementOnLine !== null
+                    && $lineGroupingStrategy->requiresSpaceBetween($previousTextElementOnLine, $positionedTextElement, $document, $page)
+                    && str_ends_with($text, ' ') === false
+                    && str_starts_with($elementText, ' ') === false
+                ) {
+                    $text .= ' ';
                 }
 
                 $text .= $elementText;
