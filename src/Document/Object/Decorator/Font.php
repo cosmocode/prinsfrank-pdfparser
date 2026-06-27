@@ -139,7 +139,8 @@ class Font extends DecoratedObject {
             ?->value;
     }
 
-    public function getWidthForChar(int $characterCode, TextState $textState, TransformationMatrix $transformationMatrix): float {
+    /** The advance width of a single character code in unscaled text space (w0·Tfs + Tc + Tw·[code 32]); the caller applies the matrix. */
+    public function getWidthForChar(int $characterCode, TextState $textState): float {
         $fontWidths = $this->getWidths();
         if ($fontWidths !== null && ($charWidth = $fontWidths->getWidthForCharacter($characterCode)) !== null) {
             $characterWidth = $charWidth;
@@ -152,14 +153,14 @@ class Font extends DecoratedObject {
             ? $textState->wordSpace
             : 0.0;
 
-        return ($characterWidth * ($textState->getFontSize()) + $textState->charSpace + $wordSpace) * $transformationMatrix->scaleX;
+        return $characterWidth * ($textState->getFontSize()) + $textState->charSpace + $wordSpace;
     }
 
     /** @param list<int> $chars */
-    public function getWidthForChars(array $chars, TextState $textState, TransformationMatrix $transformationMatrix): float {
+    public function getWidthForChars(array $chars, TextState $textState): float {
         $totalCharacterWidth = 0;
         foreach ($chars as $char) {
-            $totalCharacterWidth += $this->getWidthForChar($char, $textState, $transformationMatrix);
+            $totalCharacterWidth += $this->getWidthForChar($char, $textState);
         }
 
         return $totalCharacterWidth;
