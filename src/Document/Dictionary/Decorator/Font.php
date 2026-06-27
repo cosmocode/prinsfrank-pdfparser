@@ -151,8 +151,12 @@ readonly class Font extends DecoratedDictionary {
             ?->value;
     }
 
-    /** @param list<int> $bytes */
-    public function getWidthForBytes(array $bytes, float $wordSpace, float $charSpace, float $fontSize, float $scaleX): float {
+    /**
+     * The advance width of the bytes in unscaled text space (Σ w0·Tfs + Tc + Tw·[code 32]). The caller applies the matrix.
+     *
+     * @param list<int> $bytes
+     */
+    public function getWidthForBytes(array $bytes, float $wordSpace, float $charSpace, float $fontSize): float {
         if ($bytes === []) {
             return 0.0;
         }
@@ -167,7 +171,7 @@ readonly class Font extends DecoratedDictionary {
                 // Word spacing (Tw) applies only to the single-byte character code 32, and never to composite (Type0) fonts (spec §9.3.3).
                 $wordSpaceForChar = ($char === 32 && $this->getDescendantFonts() === []) ? $wordSpace : 0.0;
 
-                $charWidthCache[$char] = ($characterWidth * $fontSize + $charSpace + $wordSpaceForChar) * $scaleX;
+                $charWidthCache[$char] = $characterWidth * $fontSize + $charSpace + $wordSpaceForChar;
             }
 
             $totalCharacterWidth += $charWidthCache[$char];

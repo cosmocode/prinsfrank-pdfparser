@@ -8,7 +8,7 @@ use PrinsFrank\PdfParser\Exception\ParseFailureException;
 
 readonly class PositionedTextElement {
     private float $heightCache;
-    private float $advanceWidthCache;
+    private float $textSpaceAdvanceCache;
     private float $rightCache;
     public const WORD_BREAK_THRESHOLD_EM = 0.25;
 
@@ -58,25 +58,26 @@ readonly class PositionedTextElement {
     }
 
     /**
-     * The horizontal distance, in device space, that showing this element advances the text cursor, per the
-     * displacement formula in the PDF spec §9.4.4:
+     * The distance, in device space, that showing this element advances the text cursor, per the displacement
+     * formula in the PDF spec §9.4.4:
      *
      *   ((w0 − Tj/1000)·Tfs + Tc + Tw·[single-byte code 32]) · Th , transformed by the text rendering matrix.
      *
-     * Reconstructed here because Tj/TJ do not advance the text matrix in this parser.
+     * Reconstructed here because Tj/TJ do not advance the text matrix in this parser. The matrix turns the
+     * horizontal text-space advance into a page-space vector along the baseline. The result is the signed
+     * projection of that vector onto the unit vector $direction. The default direction is the page X axis.
      */
-    public function getAdvanceWidth(): float {
-        if (isset($this->advanceWidthCache)) {
-            return $this->advanceWidthCache;
+    public function getAdvanceWidth(Vector $direction = new Vector(1.0, 0.0)): float {
+        if (isset($this->textSpaceAdvanceCache) === false) {
+            $fontSize = $this->textState->getFontSize();
+
+            $glyphAdvance = $this->textState->getFontOrThrow()->getWidthForBytes($this->getBytes(), $this->textState->wordSpace, $this->textState->charSpace, $fontSize); // Σ (w0·Tfs + Tc + Tw·[code 32])
+            $offsetAdvance = -($this->getTotalOffset() / 1000) * $fontSize;                                                                                         // − Σ(Tj)/1000 · Tfs
+
+            $this->textSpaceAdvanceCache = ($glyphAdvance + $offsetAdvance) * ($this->textState->scale / 100); // · Th
         }
 
-        $scaleX = $this->absoluteMatrix->scaleX;
-        $fontSize = $this->textState->getFontSize();
-
-        $glyphAdvance = $this->textState->getFontOrThrow()->getWidthForBytes($this->getBytes(), $this->textState->wordSpace, $this->textState->charSpace, $fontSize, $scaleX); // Σ (w0·Tfs + Tc + Tw·[code 32]) · scaleX
-        $offsetAdvance = -($this->getTotalOffset() / 1000) * $fontSize * $scaleX;                                 // − Σ(Tj)/1000 · Tfs · scaleX
-
-        return $this->advanceWidthCache = ($glyphAdvance + $offsetAdvance) * ($this->textState->scale / 100); // · Th
+        return $this->textSpaceAdvanceCache * $this->absoluteMatrix->baselineVector()->dot($direction);
     }
 
     public function getRight(): float {
