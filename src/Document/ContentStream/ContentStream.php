@@ -10,8 +10,8 @@ use PrinsFrank\PdfParser\Document\ContentStream\Command\Operator\State\Interacti
 use PrinsFrank\PdfParser\Document\ContentStream\Command\Operator\State\Interaction\InteractsWithTransformationMatrix;
 use PrinsFrank\PdfParser\Document\ContentStream\Command\Operator\State\Interaction\ProducesPositionedTextElements;
 use PrinsFrank\PdfParser\Document\ContentStream\Object\TextObject;
+use PrinsFrank\PdfParser\Document\ContentStream\PositionedText\GraphicsState;
 use PrinsFrank\PdfParser\Document\ContentStream\PositionedText\PositionedTextElement;
-use PrinsFrank\PdfParser\Document\ContentStream\PositionedText\TextState;
 use PrinsFrank\PdfParser\Document\ContentStream\PositionedText\TransformationMatrix;
 use PrinsFrank\PdfParser\Document\Object\Decorator\Page;
 use PrinsFrank\PdfParser\Document\Object\Decorator\XObject;
@@ -34,30 +34,26 @@ readonly class ContentStream {
      * @return list<PositionedTextElement>
      */
     public function getPositionedTextElements(Page|XObject $context, TransformationMatrix $transformationMatrix, array $visitedObjectIds): array {
-        $positionedTextElements = $transformationStateStack = $textStateStack = [];
-        $textState = new TextState(null, null); // See table 103, Tf operator for initial value
+        $positionedTextElements = $stack = [];
+        $state = GraphicsState::initial($transformationMatrix);
         foreach ($this->content as $content) {
             if ($content instanceof ContentStreamCommand) {
                 if ($content->operator === GraphicsStateOperator::SaveCurrentStateToStack) {
-                    $transformationStateStack[] = $transformationMatrix;
-                    $textStateStack[] = $textState;
+                    $stack[] = $state;
                 } elseif ($content->operator === GraphicsStateOperator::RestoreMostRecentStateFromStack) {
-                    $transformationMatrix = array_pop($transformationStateStack)
-                        ?? throw new ParseFailureException();
-                    $textState = array_pop($textStateStack)
-                        ?? throw new ParseFailureException();
+                    $state = array_pop($stack) ?? throw new ParseFailureException();
                 }
 
                 if ($content->operator instanceof InteractsWithTextState) {
-                    $textState = $content->operator->applyToTextState($content->operands, $textState);
+                    $state = $state->withTextState($content->operator->applyToTextState($content->operands, $state->textState));
                 }
 
                 if ($content->operator instanceof InteractsWithTransformationMatrix) {
-                    $transformationMatrix = $content->operator->applyToTransformationMatrix($content->operands, $transformationMatrix, $textState);
+                    $state = $state->withCtm($content->operator->applyToTransformationMatrix($content->operands, $state->ctm, $state->textState));
                 }
 
                 if ($content->operator instanceof IncludesXObjects) {
-                    $positionedTextElements = [...$positionedTextElements, ...$content->operator->getPositionedTextElements($content->operands, $transformationMatrix, $context, $visitedObjectIds)];
+                    $positionedTextElements = [...$positionedTextElements, ...$content->operator->getPositionedTextElements($content->operands, $state->ctm, $context, $visitedObjectIds)];
                 }
 
                 continue;
@@ -66,15 +62,15 @@ readonly class ContentStream {
             $textMatrix = new TransformationMatrix(1, 0, 0, 1, 0, 0); // Identity matrix, See Table 106, Tm operator for initial value in text object
             foreach ($content->contentStreamCommands as $contentStreamCommand) {
                 if ($contentStreamCommand->operator instanceof InteractsWithTextState) {
-                    $textState = $contentStreamCommand->operator->applyToTextState($contentStreamCommand->operands, $textState);
+                    $state = $state->withTextState($contentStreamCommand->operator->applyToTextState($contentStreamCommand->operands, $state->textState));
                 }
 
                 if ($contentStreamCommand->operator instanceof InteractsWithTransformationMatrix) {
-                    $textMatrix = $contentStreamCommand->operator->applyToTransformationMatrix($contentStreamCommand->operands, $textMatrix, $textState);
+                    $textMatrix = $contentStreamCommand->operator->applyToTransformationMatrix($contentStreamCommand->operands, $textMatrix, $state->textState);
                 }
 
-                if ($contentStreamCommand->operator instanceof ProducesPositionedTextElements && $textState !== null) {
-                    $positionedTextElements[] = $contentStreamCommand->operator->getPositionedTextElement($contentStreamCommand->operands, $textMatrix, $transformationMatrix, $textState);
+                if ($contentStreamCommand->operator instanceof ProducesPositionedTextElements) {
+                    $positionedTextElements[] = $contentStreamCommand->operator->getPositionedTextElement($contentStreamCommand->operands, $textMatrix, $state->ctm, $state->textState);
                 }
             }
         }
