@@ -4,7 +4,6 @@ namespace PrinsFrank\PdfParser\Document\ContentStream\PositionedText\LineGroupin
 
 use PrinsFrank\PdfParser\Document\ContentStream\PositionedText\PositionedTextElement;
 use PrinsFrank\PdfParser\Document\Document;
-use PrinsFrank\PdfParser\Document\Object\Decorator\Page;
 use PrinsFrank\PdfParser\Exception\PdfParserException;
 
 interface LineGroupingStrategy {
@@ -20,5 +19,5 @@ interface LineGroupingStrategy {
      *
      * @throws PdfParserException
      */
-    public function requiresSpaceBetween(PositionedTextElement $previous, PositionedTextElement $current, Document $document, Page $page): bool;
+    public function requiresSpaceBetween(PositionedTextElement $previous, PositionedTextElement $current, Document $document): bool;
 }

@@ -7,7 +7,6 @@ use PrinsFrank\PdfParser\Document\ContentStream\ContentStream;
 use PrinsFrank\PdfParser\Document\ContentStream\PositionedText\PositionedTextElement;
 use PrinsFrank\PdfParser\Document\ContentStream\PositionedText\Vector;
 use PrinsFrank\PdfParser\Document\Document;
-use PrinsFrank\PdfParser\Document\Object\Decorator\Page;
 use PrinsFrank\PdfParser\Exception\PdfParserException;
 
 /**
@@ -307,7 +306,7 @@ class BaselineClusterStrategy implements LineGroupingStrategy {
      * @throws PdfParserException
      */
     #[Override]
-    public function requiresSpaceBetween(PositionedTextElement $previous, PositionedTextElement $current, Document $document, Page $page): bool {
+    public function requiresSpaceBetween(PositionedTextElement $previous, PositionedTextElement $current, Document $document): bool {
         $baseline = $previous->absoluteMatrix->baselineVector();
         $baselineScale = $baseline->length();
         $unit = $baselineScale === 0.0 ? new Vector(1.0, 0.0) : $baseline->normalized();
@@ -323,7 +322,7 @@ class BaselineClusterStrategy implements LineGroupingStrategy {
         // accurate advance the within-word residual collapses near zero, so a single WORD_BREAK_THRESHOLD fraction
         // of the em separates word breaks from kerning -- the same comparison the axis-aligned strategies make for
         // upright text.
-        $advanceWidth = $previous->getAdvanceWidth($document, $page, $unit);
+        $advanceWidth = $previous->getAdvanceWidth($document, $unit);
         $threshold = $previous->textState->getFontSize()
             * $baselineScale
             * ($previous->textState->scale / 100)

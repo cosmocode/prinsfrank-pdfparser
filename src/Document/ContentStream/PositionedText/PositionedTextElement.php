@@ -3,11 +3,11 @@
 namespace PrinsFrank\PdfParser\Document\ContentStream\PositionedText;
 
 use PrinsFrank\PdfParser\Document\ContentStream\ContentStream;
+use PrinsFrank\PdfParser\Document\Dictionary\DictionaryKey\DictionaryKey;
 use PrinsFrank\PdfParser\Document\Dictionary\DictionaryValue\Name\EncodingNameValue;
 use PrinsFrank\PdfParser\Document\Document;
 use PrinsFrank\PdfParser\Document\Generic\Character\LiteralStringEscapeCharacter;
 use PrinsFrank\PdfParser\Document\Object\Decorator\Font;
-use PrinsFrank\PdfParser\Document\Object\Decorator\Page;
 use PrinsFrank\PdfParser\Exception\ParseFailureException;
 
 readonly class PositionedTextElement {
@@ -17,19 +17,21 @@ readonly class PositionedTextElement {
         public TextState $textState,
     ) {}
 
-    public function getFont(Document $document, Page $page): Font {
+    public function getFont(Document $document): Font {
         if ($this->textState->fontName === null) {
             throw new ParseFailureException('Unable to locate font for text element');
         }
 
-        return $page->getFontDictionary()?->getObjectForReference($document, $this->textState->fontName, Font::class)
+        $reference = $this->textState->resourceChain->resolve($document, DictionaryKey::FONT, $this->textState->fontName);
+
+        return ($reference !== null ? $document->getObject($reference->objectNumber, Font::class) : null)
             ?? throw new ParseFailureException(sprintf('Unable to locate font with reference "/%s"', $this->textState->fontName->value));
     }
 
     /** @throws ParseFailureException */
-    public function getText(Document $document, Page $page): string {
+    public function getText(Document $document): string {
         $string = '';
-        $font = $this->getFont($document, $page);
+        $font = $this->getFont($document);
         foreach ($this->parseOperand() as $match) {
             if (str_starts_with($match['chars'], '(') && str_ends_with($match['chars'], ')')) {
                 $unescapedChars = LiteralStringEscapeCharacter::unescapeCharacters(substr($match['chars'], 1, -1));
@@ -112,8 +114,8 @@ readonly class PositionedTextElement {
      * default direction is page X (Vector(1, 0)), giving the advance · scaleX exactly as before; pass a baseline
      * unit vector to measure the advance along a rotated baseline.
      */
-    public function getAdvanceWidth(Document $document, Page $page, Vector $direction = new Vector(1.0, 0.0)): float {
-        $font = $this->getFont($document, $page);
+    public function getAdvanceWidth(Document $document, Vector $direction = new Vector(1.0, 0.0)): float {
+        $font = $this->getFont($document);
         $fontSize = $this->textState->getFontSize();
 
         $glyphAdvance = $font->getWidthForChars($this->getCodePoints(), $this->textState); // Σ (w0·Tfs + Tc + Tw·[code 32])

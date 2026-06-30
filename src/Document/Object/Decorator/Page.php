@@ -6,6 +6,7 @@ use PrinsFrank\PdfParser\Document\ContentStream\PositionedText\LineGroupingStrat
 use PrinsFrank\PdfParser\Document\ContentStream\PositionedText\PositionedTextElement;
 use PrinsFrank\PdfParser\Document\Dictionary\Dictionary;
 use PrinsFrank\PdfParser\Document\Dictionary\DictionaryKey\DictionaryKey;
+use PrinsFrank\PdfParser\Document\Dictionary\ResourceDictionaryChain;
 use PrinsFrank\PdfParser\Document\ContentStream\ContentStream;
 use PrinsFrank\PdfParser\Document\ContentStream\ContentStreamParser;
 use PrinsFrank\PdfParser\Document\Dictionary\DictionaryValue\Rectangle\Rectangle;
@@ -21,7 +22,7 @@ class Page extends DecoratedObject {
      */
     public function getPositionedTextElements(): array {
         return $this->getContentStream()
-            ?->getPositionedTextElements() ?? [];
+            ?->getPositionedTextElements($this->getResourceChain()) ?? [];
     }
 
     /** @throws PdfParserException */
@@ -90,14 +91,17 @@ class Page extends DecoratedObject {
         ));
     }
 
-    /** @throws PdfParserException */
-    public function getFontDictionary(): ?Dictionary {
-        if (($pageFontDictionary = $this->getDictionary()->getSubDictionary($this->document, DictionaryKey::FONT)) !== null) {
-            return $pageFontDictionary;
-        }
+    /**
+     * The /Resources chain for this page: the page's /Resources dictionary, against which the names appearing in the
+     * content stream (/F4, /Fm1, ...) are resolved. A painted Form XObject prepends its own /Resources onto this chain.
+     * See ResourceDictionaryChain.
+     *
+     * @throws PdfParserException
+     */
+    public function getResourceChain(): ResourceDictionaryChain {
+        $resourceDictionary = $this->getResourceDictionary();
 
-        return $this->getResourceDictionary()
-            ?->getSubDictionary($this->document, DictionaryKey::FONT);
+        return new ResourceDictionaryChain($resourceDictionary !== null ? [$resourceDictionary] : []);
     }
 
     /** @return list<FileSpecification> */

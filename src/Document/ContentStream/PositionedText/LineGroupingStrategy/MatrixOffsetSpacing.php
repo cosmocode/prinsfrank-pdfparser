@@ -5,7 +5,6 @@ namespace PrinsFrank\PdfParser\Document\ContentStream\PositionedText\LineGroupin
 use PrinsFrank\PdfParser\Document\ContentStream\ContentStream;
 use PrinsFrank\PdfParser\Document\ContentStream\PositionedText\PositionedTextElement;
 use PrinsFrank\PdfParser\Document\Document;
-use PrinsFrank\PdfParser\Document\Object\Decorator\Page;
 use PrinsFrank\PdfParser\Exception\PdfParserException;
 
 /**
@@ -18,10 +17,10 @@ use PrinsFrank\PdfParser\Exception\PdfParserException;
  */
 trait MatrixOffsetSpacing {
     /** @throws PdfParserException */
-    public function requiresSpaceBetween(PositionedTextElement $previous, PositionedTextElement $current, Document $document, Page $page): bool {
+    public function requiresSpaceBetween(PositionedTextElement $previous, PositionedTextElement $current, Document $document): bool {
         $gap = $current->absoluteMatrix->offsetX
             - $previous->absoluteMatrix->offsetX
-            - $previous->getAdvanceWidth($document, $page);
+            - $previous->getAdvanceWidth($document);
 
         $threshold = $previous->textState->getFontSize()
             * $previous->absoluteMatrix->scaleX

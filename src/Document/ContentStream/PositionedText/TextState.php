@@ -4,6 +4,7 @@ namespace PrinsFrank\PdfParser\Document\ContentStream\PositionedText;
 
 use PrinsFrank\PdfParser\Document\Dictionary\DictionaryKey\DictionaryKey;
 use PrinsFrank\PdfParser\Document\Dictionary\DictionaryKey\ExtendedDictionaryKey;
+use PrinsFrank\PdfParser\Document\Dictionary\ResourceDictionaryChain;
 
 readonly class TextState {
     /** Assumed font size (Tfs) when a content stream shows text without ever setting one; the PDF spec defines no default. */
@@ -18,9 +19,9 @@ readonly class TextState {
         public float $leading = 0,        // Tl
         public int $render = 0,           // Tmode
         public float $rise = 0,           // Trise
+        public ResourceDictionaryChain $resourceChain = new ResourceDictionaryChain([]),
     ) {}
 
-    /** The effective font size (Tfs), falling back to an assumed default when the content stream never set one. */
     public function getFontSize(): float {
         return $this->fontSize ?? self::DEFAULT_FONT_SIZE;
     }
@@ -35,6 +36,7 @@ readonly class TextState {
             $this->leading,
             $this->render,
             $this->rise,
+            $this->resourceChain,
         );
     }
 
@@ -48,6 +50,7 @@ readonly class TextState {
             $this->leading,
             $this->render,
             $this->rise,
+            $this->resourceChain,
         );
     }
 
@@ -61,6 +64,7 @@ readonly class TextState {
             $this->leading,
             $this->render,
             $this->rise,
+            $this->resourceChain,
         );
     }
 
@@ -74,6 +78,7 @@ readonly class TextState {
             $this->leading,
             $this->render,
             $this->rise,
+            $this->resourceChain,
         );
     }
 
@@ -87,6 +92,7 @@ readonly class TextState {
             $leading,
             $this->render,
             $this->rise,
+            $this->resourceChain,
         );
     }
 
@@ -100,6 +106,7 @@ readonly class TextState {
             $this->leading,
             $render,
             $this->rise,
+            $this->resourceChain,
         );
     }
 
@@ -113,6 +120,21 @@ readonly class TextState {
             $this->leading,
             $this->render,
             $rise,
+            $this->resourceChain,
+        );
+    }
+
+    public function withResourceChain(ResourceDictionaryChain $resourceChain): self {
+        return new TextState(
+            $this->fontName,
+            $this->fontSize,
+            $this->charSpace,
+            $this->wordSpace,
+            $this->scale,
+            $this->leading,
+            $this->render,
+            $this->rise,
+            $resourceChain,
         );
     }
 }

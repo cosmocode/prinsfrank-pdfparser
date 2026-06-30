@@ -13,6 +13,7 @@ use PrinsFrank\PdfParser\Document\ContentStream\PositionedText\GraphicsState;
 use PrinsFrank\PdfParser\Document\ContentStream\PositionedText\LineGroupingStrategy\LineGroupingStrategy;
 use PrinsFrank\PdfParser\Document\ContentStream\PositionedText\PositionedTextElement;
 use PrinsFrank\PdfParser\Document\ContentStream\PositionedText\TransformationMatrix;
+use PrinsFrank\PdfParser\Document\Dictionary\ResourceDictionaryChain;
 use PrinsFrank\PdfParser\Document\Document;
 use PrinsFrank\PdfParser\Document\Object\Decorator\Page;
 use PrinsFrank\PdfParser\Exception\ParseFailureException;
@@ -32,10 +33,21 @@ readonly class ContentStream {
         $this->content = $content;
     }
 
-    /** @return list<PositionedTextElement> */
-    public function getPositionedTextElements(): array {
-        $positionedTextElements = $stack = [];
+    /**
+     * Return every run of text shown in this content stream, each with its position on the page. The names it shows
+     * text in (/F4, ...) resolve lazily after the walk against the $resourceChain, so it is stamped onto each
+     * element's text state here.
+     *
+     * @throws PdfParserException
+     * @return list<PositionedTextElement>
+     */
+    public function getPositionedTextElements(?ResourceDictionaryChain $resourceChain = null): array {
+        // The resolution chain is constant for the whole stream, so it is stamped onto the text state once here and
+        // carried unchanged through every later state change rather than threaded into each element; getFont() resolves
+        // the font lazily against it after the walk.
         $state = GraphicsState::initial();
+        $state = $state->withTextState($state->textState->withResourceChain($resourceChain ?? new ResourceDictionaryChain([])));
+        $positionedTextElements = $stack = [];
         foreach ($this->content as $content) {
             if ($content instanceof ContentStreamCommand) {
                 if ($content->operator === GraphicsStateOperator::SaveCurrentStateToStack) {
@@ -78,7 +90,8 @@ readonly class ContentStream {
     public function getText(Document $document, Page $page, LineGroupingStrategy $lineGroupingStrategy): string {
         $text = '';
         $isFirstLine = true;
-        foreach ($lineGroupingStrategy->group($this->getPositionedTextElements()) as $positionedTextElementsForLine) {
+        $positionedTextElements = $this->getPositionedTextElements($page->getResourceChain());
+        foreach ($lineGroupingStrategy->group($positionedTextElements) as $positionedTextElementsForLine) {
             if (!$isFirstLine) {
                 $text .= "\n";
             }
@@ -86,7 +99,7 @@ readonly class ContentStream {
             $isFirstLine = false;
             $previousTextElementOnLine = null;
             foreach ($positionedTextElementsForLine as $positionedTextElement) {
-                $elementText = $positionedTextElement->getText($document, $page);
+                $elementText = $positionedTextElement->getText($document);
                 if ($elementText === '') {
                     $previousTextElementOnLine = $positionedTextElement;
                     continue;
@@ -94,7 +107,7 @@ readonly class ContentStream {
 
                 if (
                     $previousTextElementOnLine !== null
-                    && $lineGroupingStrategy->requiresSpaceBetween($previousTextElementOnLine, $positionedTextElement, $document, $page)
+                    && $lineGroupingStrategy->requiresSpaceBetween($previousTextElementOnLine, $positionedTextElement, $document)
                     && str_ends_with($text, ' ') === false
                     && str_starts_with($elementText, ' ') === false
                 ) {

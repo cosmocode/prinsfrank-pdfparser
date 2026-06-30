@@ -13,9 +13,10 @@ use PrinsFrank\PdfParser\Document\ContentStream\PositionedText\TextState;
 use PrinsFrank\PdfParser\Document\ContentStream\PositionedText\TransformationMatrix;
 use PrinsFrank\PdfParser\Document\Dictionary\Dictionary;
 use PrinsFrank\PdfParser\Document\Dictionary\DictionaryKey\DictionaryKey;
+use PrinsFrank\PdfParser\Document\Dictionary\DictionaryValue\Reference\ReferenceValue;
+use PrinsFrank\PdfParser\Document\Dictionary\ResourceDictionaryChain;
 use PrinsFrank\PdfParser\Document\Document;
 use PrinsFrank\PdfParser\Document\Object\Decorator\Font;
-use PrinsFrank\PdfParser\Document\Object\Decorator\Page;
 
 #[CoversClass(BaselineClusterStrategy::class)]
 #[CoversClass(Block::class)]
@@ -200,17 +201,17 @@ class BaselineClusterStrategyTest extends TestCase {
         $document = self::createStub(Document::class);
         $font = self::createStub(Font::class);
         $font->method('getWidthForChars')->willReturn(3.0);
-        $fontDictionary = self::createStub(Dictionary::class);
-        $fontDictionary->method('getObjectForReference')->willReturn($font);
-        $page = self::createStub(Page::class);
-        $page->method('getFontDictionary')->willReturn($fontDictionary);
+        $document->method('getObject')->willReturn($font);
+        $resourceDictionary = self::createStub(Dictionary::class);
+        $resourceDictionary->method('getSubDictionary')->willReturnSelf();
+        $resourceDictionary->method('getValueForKey')->willReturn(new ReferenceValue(1, 0));
         $strategy = new BaselineClusterStrategy();
 
-        $previous = new PositionedTextElement('(A)', new TransformationMatrix(0, -1, 1, 0, 300, 700), new TextState(DictionaryKey::FONT, 10));
+        $previous = new PositionedTextElement('(A)', new TransformationMatrix(0, -1, 1, 0, 300, 700), new TextState(DictionaryKey::FONT, 10, resourceChain: new ResourceDictionaryChain([$resourceDictionary])));
         $farBelow = new PositionedTextElement('(B)', new TransformationMatrix(0, -1, 1, 0, 300, 600), new TextState(DictionaryKey::FONT, 10));
         $justBelow = new PositionedTextElement('(B)', new TransformationMatrix(0, -1, 1, 0, 300, 695), new TextState(DictionaryKey::FONT, 10));
 
-        static::assertTrue($strategy->requiresSpaceBetween($previous, $farBelow, $document, $page));
-        static::assertFalse($strategy->requiresSpaceBetween($previous, $justBelow, $document, $page));
+        static::assertTrue($strategy->requiresSpaceBetween($previous, $farBelow, $document));
+        static::assertFalse($strategy->requiresSpaceBetween($previous, $justBelow, $document));
     }
 }
