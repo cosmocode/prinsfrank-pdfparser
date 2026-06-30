@@ -38,16 +38,9 @@ enum TextShowingOperator: string implements InteractsWithTextState, ProducesPosi
                 throw new ParseFailureException();
             }
 
-            return new TextState(
-                $textState->fontName,
-                $textState->fontSize,
-                (float) $spacing[1],
-                (float) $spacing[0],
-                $textState->scale,
-                $textState->leading,
-                $textState->render,
-                $textState->rise,
-            );
+            return $textState
+                ->withCharSpace((float) $spacing[1])
+                ->withWordSpace((float) $spacing[0]);
         }
 
         return $textState;
