@@ -22,7 +22,7 @@ class Page extends DecoratedObject {
      */
     public function getPositionedTextElements(): array {
         return $this->getContentStream()
-            ?->getPositionedTextElements($this->getResourceChain()) ?? [];
+            ?->getPositionedTextElements($this->document, $this->getResourceChain()) ?? [];
     }
 
     /** @throws PdfParserException */

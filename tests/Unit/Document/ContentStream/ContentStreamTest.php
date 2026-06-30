@@ -9,8 +9,15 @@ use PrinsFrank\PdfParser\Document\ContentStream\ContentStreamParser;
 use PrinsFrank\PdfParser\Document\ContentStream\PositionedText\PositionedTextElement;
 use PrinsFrank\PdfParser\Document\ContentStream\PositionedText\TextState;
 use PrinsFrank\PdfParser\Document\ContentStream\PositionedText\TransformationMatrix;
+use PrinsFrank\PdfParser\Document\Dictionary\Dictionary;
+use PrinsFrank\PdfParser\Document\Dictionary\DictionaryEntry\DictionaryEntry;
+use PrinsFrank\PdfParser\Document\Dictionary\DictionaryKey\DictionaryKey;
 use PrinsFrank\PdfParser\Document\Dictionary\DictionaryKey\ExtendedDictionaryKey;
+use PrinsFrank\PdfParser\Document\Dictionary\DictionaryValue\Reference\ReferenceValue;
+use PrinsFrank\PdfParser\Document\Dictionary\ResourceDictionaryChain;
+use PrinsFrank\PdfParser\Document\Document;
 use PrinsFrank\PdfParser\Document\Object\Decorator\GenericObject;
+use PrinsFrank\PdfParser\Document\Object\Decorator\XObject;
 use PrinsFrank\PdfParser\Stream\FileStream;
 
 #[CoversClass(ContentStream::class)]
@@ -178,6 +185,109 @@ class ContentStreamTest extends TestCase {
                 new PositionedTextElement('(World])', new TransformationMatrix(1.0, 0, 0, 1.0, 0.0, 0.0), new TextState(new ExtendedDictionaryKey('F1'), 7)),
             ],
             ContentStreamParser::parse([$decoratedObject])->getPositionedTextElements(),
+        );
+    }
+
+    public function testGetPositionedTextElementsResolvesTextInFormXObject(): void {
+        $pageContentStream = FileStream::fromString('/Fm1 Do');
+        $pageObject = $this->createMock(GenericObject::class);
+        $pageObject->expects(self::once())->method('getStream')->willReturn($pageContentStream);
+
+        $formResources = new Dictionary(
+            new DictionaryEntry(DictionaryKey::FONT, new Dictionary(
+                new DictionaryEntry(new ExtendedDictionaryKey('F4'), new ReferenceValue(6, 0)),
+            )),
+        );
+        $formObject = $this->createMock(XObject::class);
+        $formObject->method('isForm')->willReturn(true);
+        $formObject->method('getDictionary')->willReturn(new Dictionary(
+            new DictionaryEntry(DictionaryKey::RESOURCES, $formResources),
+        ));
+        $formObject->method('getStream')->willReturn(FileStream::fromString(<<<EOD
+            BT
+            /F4 12 Tf
+            1 0 0 1 10 20 Tm
+            (Hi) Tj
+            ET
+            EOD));
+
+        $document = $this->createMock(Document::class);
+        $document->method('getObject')->willReturn($formObject);
+
+        $pageResources = new Dictionary(
+            new DictionaryEntry(DictionaryKey::XOBJECT, new Dictionary(
+                new DictionaryEntry(new ExtendedDictionaryKey('Fm1'), new ReferenceValue(5, 0)),
+            )),
+        );
+
+        // The form's own /Resources is prepended onto the page's, so the stamped chain is [form, page].
+        static::assertEquals(
+            [
+                new PositionedTextElement('(Hi)', new TransformationMatrix(1, 0, 0, 1, 10.0, 20.0), new TextState(new ExtendedDictionaryKey('F4'), 12, resourceChain: new ResourceDictionaryChain([$formResources, $pageResources]))),
+            ],
+            ContentStreamParser::parse([$pageObject])->getPositionedTextElements($document, new ResourceDictionaryChain([$pageResources])),
+        );
+    }
+
+    public function testGetPositionedTextElementsResolvesFormFontFromInheritedChain(): void {
+        $pageContentStream = FileStream::fromString('/Fm1 Do');
+        $pageObject = $this->createMock(GenericObject::class);
+        $pageObject->expects(self::once())->method('getStream')->willReturn($pageContentStream);
+
+        // The form has no /Resources of its own, so the font name it shows (/F4) can only be resolved by falling back
+        // up the chain to the page's resources - the same chain that resolves the form (/Fm1) itself.
+        $formObject = $this->createMock(XObject::class);
+        $formObject->method('isForm')->willReturn(true);
+        $formObject->method('getDictionary')->willReturn(new Dictionary());
+        $formObject->method('getStream')->willReturn(FileStream::fromString(<<<EOD
+            BT
+            /F4 12 Tf
+            1 0 0 1 10 20 Tm
+            (Hi) Tj
+            ET
+            EOD));
+
+        $document = $this->createMock(Document::class);
+        $document->method('getObject')->willReturn($formObject);
+
+        // One /Resources dictionary carries both the /XObject (to find the form) and the /Font the form inherits.
+        $pageResources = new Dictionary(
+            new DictionaryEntry(DictionaryKey::XOBJECT, new Dictionary(
+                new DictionaryEntry(new ExtendedDictionaryKey('Fm1'), new ReferenceValue(5, 0)),
+            )),
+            new DictionaryEntry(DictionaryKey::FONT, new Dictionary(
+                new DictionaryEntry(new ExtendedDictionaryKey('F4'), new ReferenceValue(6, 0)),
+            )),
+        );
+
+        static::assertEquals(
+            [
+                new PositionedTextElement('(Hi)', new TransformationMatrix(1, 0, 0, 1, 10.0, 20.0), new TextState(new ExtendedDictionaryKey('F4'), 12, resourceChain: new ResourceDictionaryChain([$pageResources]))),
+            ],
+            ContentStreamParser::parse([$pageObject])->getPositionedTextElements($document, new ResourceDictionaryChain([$pageResources])),
+        );
+    }
+
+    public function testGetPositionedTextElementsIgnoresNonFormXObject(): void {
+        $pageContentStream = FileStream::fromString('/Im1 Do');
+        $pageObject = $this->createMock(GenericObject::class);
+        $pageObject->expects(self::once())->method('getStream')->willReturn($pageContentStream);
+
+        $imageObject = $this->createMock(XObject::class);
+        $imageObject->method('isForm')->willReturn(false);
+
+        $document = $this->createMock(Document::class);
+        $document->method('getObject')->willReturn($imageObject);
+
+        $pageResources = new Dictionary(
+            new DictionaryEntry(DictionaryKey::XOBJECT, new Dictionary(
+                new DictionaryEntry(new ExtendedDictionaryKey('Im1'), new ReferenceValue(5, 0)),
+            )),
+        );
+
+        static::assertSame(
+            [],
+            ContentStreamParser::parse([$pageObject])->getPositionedTextElements($document, new ResourceDictionaryChain([$pageResources])),
         );
     }
 }
