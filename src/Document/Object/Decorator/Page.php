@@ -6,13 +6,14 @@ use PrinsFrank\MarkDownDom\Renderer\MarkdownRenderer;
 use PrinsFrank\MarkDownDom\Renderer\TextRenderer;
 use PrinsFrank\PdfParser\Document\ContentStream\ContentStream;
 use PrinsFrank\PdfParser\Document\ContentStream\ContentStreamParser;
+use PrinsFrank\PdfParser\Document\ContentStream\PositionedText\ContentStreamScope;
 use PrinsFrank\PdfParser\Document\ContentStream\PositionedText\PositionedTextElement;
 use PrinsFrank\PdfParser\Document\ContentStream\PositionedText\TransformationMatrix;
 use PrinsFrank\PdfParser\Document\Dictionary\Dictionary;
 use PrinsFrank\PdfParser\Document\Dictionary\DictionaryKey\DictionaryKey;
-use PrinsFrank\PdfParser\Document\Dictionary\DictionaryKey\ExtendedDictionaryKey;
 use PrinsFrank\PdfParser\Document\Dictionary\DictionaryValue\Rectangle\Rectangle;
 use PrinsFrank\PdfParser\Document\Dictionary\DictionaryValue\Reference\ReferenceValue;
+use PrinsFrank\PdfParser\Document\Dictionary\ResourceDictionaryChain;
 use PrinsFrank\PdfParser\Exception\InvalidArgumentException;
 use PrinsFrank\PdfParser\Exception\ParseFailureException;
 use PrinsFrank\PdfParser\Exception\PdfParserException;
@@ -25,7 +26,7 @@ class Page extends DecoratedObject {
      */
     public function getPositionedTextElements(): array {
         return $this->getContentStream()
-            ?->getPositionedTextElements($this, new TransformationMatrix(1, 0, 0, 1, 0, 0), []) ?? [];
+            ?->getPositionedTextElements(new ContentStreamScope($this->document, $this->getResourceChain()), new TransformationMatrix(1, 0, 0, 1, 0, 0), []) ?? [];
     }
 
     /** @throws PdfParserException */
@@ -99,28 +100,17 @@ class Page extends DecoratedObject {
         ));
     }
 
-    /** @throws PdfParserException */
-    public function getFontDictionary(): ?Dictionary {
-        return $this->getResourceDictionary()
-            ?->getSubDictionary($this->document, DictionaryKey::FONT);
-    }
+    /**
+     * The /Resources chain for this page: the page's /Resources dictionary, against which the names appearing in the
+     * content stream (/F4, /Fm1, ...) are resolved. A painted Form XObject prepends its own /Resources onto this chain.
+     * See ResourceDictionaryChain.
+     *
+     * @throws PdfParserException
+     */
+    public function getResourceChain(): ResourceDictionaryChain {
+        $resourceDictionary = $this->getResourceDictionary();
 
-    public function getFont(DictionaryKey|ExtendedDictionaryKey $dictionaryKey): ?Font {
-        $font = $this->getFontDictionary()
-            ?->getObjectForReference($this->document, $dictionaryKey, Font::class);
-        if ($font !== null) {
-            return $font;
-        }
-
-        foreach ($this->getXObjects() as $xObject) {
-            $font = $xObject->getFontDictionary()
-                ?->getObjectForReference($this->document, $dictionaryKey, Font::class);
-            if ($font !== null) {
-                return $font;
-            }
-        }
-
-        return null;
+        return new ResourceDictionaryChain($resourceDictionary !== null ? [$resourceDictionary] : []);
     }
 
     /** @return list<FileSpecification> */

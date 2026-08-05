@@ -3,8 +3,9 @@
 namespace PrinsFrank\PdfParser\Document\ContentStream\PositionedText;
 
 use PrinsFrank\PdfParser\Document\ContentStream\PositionedText\TextSegment\TextSegment;
+use PrinsFrank\PdfParser\Document\Dictionary\DictionaryKey\DictionaryKey;
+use PrinsFrank\PdfParser\Document\Document;
 use PrinsFrank\PdfParser\Document\Object\Decorator\Font;
-use PrinsFrank\PdfParser\Document\Object\Decorator\Page;
 use PrinsFrank\PdfParser\Exception\ParseFailureException;
 
 readonly class PositionedTextElement {
@@ -17,18 +18,20 @@ readonly class PositionedTextElement {
         public TextState $textState,
     ) {}
 
-    public function getFont(Page $page): Font {
+    public function getFont(Document $document): Font {
         if ($this->textState->fontName === null) {
             throw new ParseFailureException('Unable to locate font for text element');
         }
 
-        return $page->getFont($this->textState->fontName)
+        $reference = $this->textState->resourceChain->resolve($document, DictionaryKey::FONT, $this->textState->fontName);
+
+        return ($reference !== null ? $document->getObject($reference->objectNumber, Font::class) : null)
             ?? throw new ParseFailureException(sprintf('Unable to locate font with reference "/%s"', $this->textState->fontName->value));
     }
 
     /** @throws ParseFailureException */
-    public function getText(Page $page): string {
-        $font = $this->getFont($page);
+    public function getText(Document $document): string {
+        $font = $this->getFont($document);
         $differences = $font->getDifferences();
         $encoding = $font->getEncoding();
         $toUnicodeCMap = $font->getToUnicodeCMap() ?? $font->getToUnicodeCMapDescendantFont();

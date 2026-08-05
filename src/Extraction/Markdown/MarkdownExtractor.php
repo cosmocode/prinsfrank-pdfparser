@@ -46,13 +46,13 @@ class MarkdownExtractor {
             $previousTextElementOnLine = null;
             $previousTextElementEndsWithSpace = false;
             foreach ($positionedTextElementsForLine as $positionedTextElement) {
-                $elementText = $positionedTextElement->getText($page);
+                $elementText = $positionedTextElement->getText($page->document);
                 if ($elementText === '') {
                     $previousTextElementOnLine = $positionedTextElement;
                     continue;
                 }
 
-                $font = $positionedTextElement->getFont($page);
+                $font = $positionedTextElement->getFont($page->document);
                 $currentHeadingLevel = $font->getHeadingLevel($positionedTextElement->textState, $positionedTextElement->absoluteMatrix);
                 if ($previousHeadingLevel !== $currentHeadingLevel) {
                     self::flushInLineNodes($inLineNodes, $textBuffer, $previousElementIsBold, $previousElementIsItalic);

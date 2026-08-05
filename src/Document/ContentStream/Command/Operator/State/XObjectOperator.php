@@ -4,10 +4,10 @@ namespace PrinsFrank\PdfParser\Document\ContentStream\Command\Operator\State;
 
 use Override;
 use PrinsFrank\PdfParser\Document\ContentStream\Command\Operator\State\Interaction\IncludesXObjects;
+use PrinsFrank\PdfParser\Document\ContentStream\PositionedText\ContentStreamScope;
 use PrinsFrank\PdfParser\Document\ContentStream\PositionedText\TransformationMatrix;
+use PrinsFrank\PdfParser\Document\Dictionary\DictionaryKey\DictionaryKey;
 use PrinsFrank\PdfParser\Document\Dictionary\DictionaryKey\ExtendedDictionaryKey;
-use PrinsFrank\PdfParser\Document\Dictionary\DictionaryValue\Reference\ReferenceValue;
-use PrinsFrank\PdfParser\Document\Object\Decorator\Page;
 use PrinsFrank\PdfParser\Document\Object\Decorator\XObject;
 
 /**
@@ -20,14 +20,13 @@ enum XObjectOperator: string implements IncludesXObjects {
 
     /** @param list<int> $visitedObjectIds */
     #[Override]
-    public function getPositionedTextElements(string $operands, TransformationMatrix $transformationMatrix, Page|XObject $context, array $visitedObjectIds): array {
-        $reference = $context->getXObjectsDictionary()
-            ?->getValueForKey($context->document, ExtendedDictionaryKey::fromKeyString($operands), ReferenceValue::class);
+    public function getPositionedTextElements(string $operands, ContentStreamScope $scope, TransformationMatrix $transformationMatrix, array $visitedObjectIds): array {
+        $reference = $scope->resolve(DictionaryKey::XOBJECT, ExtendedDictionaryKey::fromKeyString($operands));
         if ($reference === null) {
             return [];
         }
 
-        $xObject = $context->document->getObject($reference->objectNumber, XObject::class);
+        $xObject = $scope->document->getObject($reference->objectNumber, XObject::class);
         if ($xObject === null || $xObject->isForm() === false) {
             return [];
         }
@@ -37,6 +36,6 @@ enum XObjectOperator: string implements IncludesXObjects {
         }
 
         $visitedObjectIds[] = $xObject->objectNumber;
-        return $xObject->getPositionedTextElements($transformationMatrix, $visitedObjectIds);
+        return $xObject->getPositionedTextElements($scope, $transformationMatrix, $visitedObjectIds);
     }
 }

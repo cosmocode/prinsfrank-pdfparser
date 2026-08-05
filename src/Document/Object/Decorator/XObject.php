@@ -5,6 +5,7 @@ namespace PrinsFrank\PdfParser\Document\Object\Decorator;
 use Override;
 use PrinsFrank\PdfParser\Document\ContentStream\Command\Operator\Object\TextObjectOperator;
 use PrinsFrank\PdfParser\Document\ContentStream\ContentStreamParser;
+use PrinsFrank\PdfParser\Document\ContentStream\PositionedText\ContentStreamScope;
 use PrinsFrank\PdfParser\Document\ContentStream\PositionedText\PositionedTextElement;
 use PrinsFrank\PdfParser\Document\ContentStream\PositionedText\TransformationMatrix;
 use PrinsFrank\PdfParser\Document\Dictionary\Dictionary;
@@ -59,18 +60,6 @@ class XObject extends DecoratedObject {
     public function getResourceDictionary(): ?Dictionary {
         return $this->getDictionary()
             ->getSubDictionary($this->document, DictionaryKey::RESOURCES);
-    }
-
-    /** @throws PdfParserException */
-    public function getXObjectsDictionary(): ?Dictionary {
-        return $this->getResourceDictionary()
-            ?->getSubDictionary($this->document, DictionaryKey::XOBJECT);
-    }
-
-    /** @throws PdfParserException */
-    public function getFontDictionary(): ?Dictionary {
-        return $this->getResourceDictionary()
-            ?->getSubDictionary($this->document, DictionaryKey::FONT);
     }
 
     public function getImageType(): ?ImageType {
@@ -163,10 +152,15 @@ class XObject extends DecoratedObject {
     }
 
     /**
+     * The text shown inside this Form XObject, positioned on the page. Its own /Resources is prepended onto the chain
+     * in scope, so a name it defines shadows the surrounding ones while a name it leaves out - or omitting /Resources
+     * entirely - falls back up to the enclosing scope.
+     *
      * @param list<int> $visitedObjectIds
+     * @throws PdfParserException
      * @return list<PositionedTextElement>
      */
-    public function getPositionedTextElements(TransformationMatrix $transformationMatrix, array $visitedObjectIds): array {
+    public function getPositionedTextElements(ContentStreamScope $scope, TransformationMatrix $transformationMatrix, array $visitedObjectIds): array {
         if ($this->isForm() === false) {
             return [];
         }
@@ -176,6 +170,6 @@ class XObject extends DecoratedObject {
         }
 
         return ContentStreamParser::parse([$this])
-            ->getPositionedTextElements($this, $transformationMatrix, $visitedObjectIds);
+            ->getPositionedTextElements($scope->forForm($this->getResourceDictionary()), $transformationMatrix, $visitedObjectIds);
     }
 }
