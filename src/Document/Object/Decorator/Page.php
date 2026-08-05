@@ -7,6 +7,7 @@ use PrinsFrank\MarkDownDom\Renderer\TextRenderer;
 use PrinsFrank\PdfParser\Document\ContentStream\ContentStream;
 use PrinsFrank\PdfParser\Document\ContentStream\ContentStreamParser;
 use PrinsFrank\PdfParser\Document\ContentStream\PositionedText\ContentStreamScope;
+use PrinsFrank\PdfParser\Document\ContentStream\PositionedText\GraphicsState;
 use PrinsFrank\PdfParser\Document\ContentStream\PositionedText\PositionedTextElement;
 use PrinsFrank\PdfParser\Document\ContentStream\PositionedText\TransformationMatrix;
 use PrinsFrank\PdfParser\Document\Dictionary\Dictionary;
@@ -26,7 +27,10 @@ class Page extends DecoratedObject {
      */
     public function getPositionedTextElements(): array {
         return $this->getContentStream()
-            ?->getPositionedTextElements(new ContentStreamScope($this->document, $this->getResourceChain()), new TransformationMatrix(1, 0, 0, 1, 0, 0), []) ?? [];
+            ?->getPositionedTextElements(
+                new ContentStreamScope($this->document, $this->getResourceChain()),
+                GraphicsState::initial(new TransformationMatrix(1, 0, 0, 1, 0, 0)), // Identity matrix
+            ) ?? [];
     }
 
     /** @throws PdfParserException */

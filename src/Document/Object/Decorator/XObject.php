@@ -6,6 +6,7 @@ use Override;
 use PrinsFrank\PdfParser\Document\ContentStream\Command\Operator\Object\TextObjectOperator;
 use PrinsFrank\PdfParser\Document\ContentStream\ContentStreamParser;
 use PrinsFrank\PdfParser\Document\ContentStream\PositionedText\ContentStreamScope;
+use PrinsFrank\PdfParser\Document\ContentStream\PositionedText\GraphicsState;
 use PrinsFrank\PdfParser\Document\ContentStream\PositionedText\PositionedTextElement;
 use PrinsFrank\PdfParser\Document\ContentStream\PositionedText\TransformationMatrix;
 use PrinsFrank\PdfParser\Document\Dictionary\Dictionary;
@@ -152,15 +153,41 @@ class XObject extends DecoratedObject {
     }
 
     /**
-     * The text shown inside this Form XObject, positioned on the page. Its own /Resources is prepended onto the chain
+     * The matrix mapping this form's own coordinate space onto the space it is painted in, or null when it defines no
+     * /Matrix or one that cannot be read as six numbers.
+     *
+     * @throws PdfParserException
+     */
+    public function getMatrix(): ?TransformationMatrix {
+        $matrix = $this->getDictionary()->getValueForKey($this->document, DictionaryKey::MATRIX, ArrayValue::class);
+        if (!$matrix instanceof ArrayValue || count($matrix->value) !== 6) {
+            return null;
+        }
+
+        $values = [];
+        foreach ($matrix->value as $value) {
+            if (!is_int($value) && !is_string($value)) {
+                return null;
+            }
+
+            $values[] = (float) $value;
+        }
+
+        return new TransformationMatrix($values[0], $values[1], $values[2], $values[3], $values[4], $values[5]);
+    }
+
+    /**
+     * The text shown inside this Form XObject, positioned on the page with its /Matrix on top of the matrix in $state.
+     *
+     * It starts from the graphics state in effect where it is painted, not a blank one (ISO 32000-1:2008 §8.10.1), so
+     * text in a form that never sets its own font still resolves one. Its own /Resources is prepended onto the chain
      * in scope, so a name it defines shadows the surrounding ones while a name it leaves out - or omitting /Resources
      * entirely - falls back up to the enclosing scope.
      *
-     * @param list<int> $visitedObjectIds
      * @throws PdfParserException
      * @return list<PositionedTextElement>
      */
-    public function getPositionedTextElements(ContentStreamScope $scope, TransformationMatrix $transformationMatrix, array $visitedObjectIds): array {
+    public function getPositionedTextElements(ContentStreamScope $scope, GraphicsState $state): array {
         if ($this->isForm() === false) {
             return [];
         }
@@ -169,7 +196,12 @@ class XObject extends DecoratedObject {
             return [];
         }
 
+        $matrix = $this->getMatrix() ?? new TransformationMatrix(1, 0, 0, 1, 0, 0);
+
         return ContentStreamParser::parse([$this])
-            ->getPositionedTextElements($scope->forForm($this->getResourceDictionary()), $transformationMatrix, $visitedObjectIds);
+            ->getPositionedTextElements(
+                $scope->forForm($this->getResourceDictionary()),
+                $state->withCtm($matrix->multiplyWith($state->ctm)),
+            );
     }
 }

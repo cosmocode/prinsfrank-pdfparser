@@ -7,15 +7,24 @@ use PHPUnit\Framework\TestCase;
 use PrinsFrank\PdfParser\Document\ContentStream\ContentStream;
 use PrinsFrank\PdfParser\Document\ContentStream\ContentStreamParser;
 use PrinsFrank\PdfParser\Document\ContentStream\PositionedText\ContentStreamScope;
+use PrinsFrank\PdfParser\Document\ContentStream\PositionedText\GraphicsState;
 use PrinsFrank\PdfParser\Document\ContentStream\PositionedText\PositionedTextElement;
 use PrinsFrank\PdfParser\Document\ContentStream\PositionedText\TextSegment\TextSegment;
 use PrinsFrank\PdfParser\Document\ContentStream\PositionedText\TextState;
 use PrinsFrank\PdfParser\Document\ContentStream\PositionedText\TransformationMatrix;
+use PrinsFrank\PdfParser\Document\Dictionary\Dictionary;
+use PrinsFrank\PdfParser\Document\Dictionary\DictionaryEntry\DictionaryEntry;
+use PrinsFrank\PdfParser\Document\Dictionary\DictionaryKey\DictionaryKey;
 use PrinsFrank\PdfParser\Document\Dictionary\DictionaryKey\ExtendedDictionaryKey;
+use PrinsFrank\PdfParser\Document\Dictionary\DictionaryValue\Array\ArrayValue;
+use PrinsFrank\PdfParser\Document\Dictionary\DictionaryValue\Name\SubtypeNameValue;
+use PrinsFrank\PdfParser\Document\Dictionary\DictionaryValue\Reference\ReferenceValue;
 use PrinsFrank\PdfParser\Document\Dictionary\DictionaryValue\TextString\TextStringValue;
 use PrinsFrank\PdfParser\Document\Dictionary\ResourceDictionaryChain;
 use PrinsFrank\PdfParser\Document\Document;
 use PrinsFrank\PdfParser\Document\Object\Decorator\GenericObject;
+use PrinsFrank\PdfParser\Document\Object\Decorator\XObject;
+use PrinsFrank\PdfParser\Document\Object\Item\ObjectItem;
 use PrinsFrank\PdfParser\Stream\FileStream;
 
 #[CoversClass(ContentStream::class)]
@@ -160,7 +169,7 @@ class ContentStreamTest extends TestCase {
                 new PositionedTextElement([new TextSegment(new TextStringValue('<0003>'), null)], new TransformationMatrix(0.75, 0, 0, 0.75, 200.80728, 730.5896001075), new TextState(new ExtendedDictionaryKey('F4'), 14.666667)),
                 new PositionedTextElement([new TextSegment(new TextStringValue('<0003>'), null)], new TransformationMatrix(0.75, 0, 0, 0.75, 72.0, 716.0433351075001), new TextState(new ExtendedDictionaryKey('F4'), 14.666667)),
             ],
-            ContentStreamParser::parse([$decoratedObject])->getPositionedTextElements(new ContentStreamScope(self::createStub(Document::class), new ResourceDictionaryChain([])), new TransformationMatrix(1, 0, 0, 1, 0, 0), []),
+            ContentStreamParser::parse([$decoratedObject])->getPositionedTextElements(new ContentStreamScope(self::createStub(Document::class), new ResourceDictionaryChain([])), GraphicsState::initial(new TransformationMatrix(1, 0, 0, 1, 0, 0))),
         );
     }
 
@@ -182,7 +191,182 @@ class ContentStreamTest extends TestCase {
                 new PositionedTextElement([new TextSegment(new TextStringValue('([Hello)'), null)], new TransformationMatrix(1.0, 0, 0, 1.0, 0.0, 0.0), new TextState(new ExtendedDictionaryKey('F1'), 7)),
                 new PositionedTextElement([new TextSegment(new TextStringValue('(World])'), null)], new TransformationMatrix(1.0, 0, 0, 1.0, 0.0, 0.0), new TextState(new ExtendedDictionaryKey('F1'), 7)),
             ],
-            ContentStreamParser::parse([$decoratedObject])->getPositionedTextElements(new ContentStreamScope(self::createStub(Document::class), new ResourceDictionaryChain([])), new TransformationMatrix(1, 0, 0, 1, 0, 0), []),
+            ContentStreamParser::parse([$decoratedObject])->getPositionedTextElements(new ContentStreamScope(self::createStub(Document::class), new ResourceDictionaryChain([])), GraphicsState::initial(new TransformationMatrix(1, 0, 0, 1, 0, 0))),
         );
+    }
+
+    public function testGetPositionedTextElementsResolvesTextInFormXObject(): void {
+        $formResources = new Dictionary(
+            new DictionaryEntry(DictionaryKey::FONT, new Dictionary(
+                new DictionaryEntry(new ExtendedDictionaryKey('F4'), new ReferenceValue(6, 0)),
+            )),
+        );
+        $formObject = $this->formXObject(
+            <<<EOD
+            BT
+            /F4 12 Tf
+            1 0 0 1 10 20 Tm
+            (Hi) Tj
+            ET
+            EOD,
+            new DictionaryEntry(DictionaryKey::RESOURCES, $formResources),
+        );
+
+        $pageResources = new Dictionary(
+            new DictionaryEntry(DictionaryKey::XOBJECT, new Dictionary(
+                new DictionaryEntry(new ExtendedDictionaryKey('Fm1'), new ReferenceValue(5, 0)),
+            )),
+        );
+
+        // The form's own /Resources is prepended onto the page's, so the stamped chain is [form, page].
+        static::assertEquals(
+            [
+                new PositionedTextElement([new TextSegment(new TextStringValue('(Hi)'), null)], new TransformationMatrix(1, 0, 0, 1, 10.0, 20.0), new TextState(new ExtendedDictionaryKey('F4'), 12, resourceChain: new ResourceDictionaryChain([$formResources, $pageResources]))),
+            ],
+            $this->paintForm('/Fm1 Do', $formObject, $pageResources),
+        );
+    }
+
+    public function testGetPositionedTextElementsResolvesFormFontFromInheritedChain(): void {
+        // The form has no /Resources of its own, so the font name it shows (/F4) can only be resolved by falling back
+        // up the chain to the page's resources - the same chain that resolves the form (/Fm1) itself.
+        $formObject = $this->formXObject(<<<EOD
+            BT
+            /F4 12 Tf
+            1 0 0 1 10 20 Tm
+            (Hi) Tj
+            ET
+            EOD);
+
+        // One /Resources dictionary carries both the /XObject (to find the form) and the /Font the form inherits.
+        $pageResources = new Dictionary(
+            new DictionaryEntry(DictionaryKey::XOBJECT, new Dictionary(
+                new DictionaryEntry(new ExtendedDictionaryKey('Fm1'), new ReferenceValue(5, 0)),
+            )),
+            new DictionaryEntry(DictionaryKey::FONT, new Dictionary(
+                new DictionaryEntry(new ExtendedDictionaryKey('F4'), new ReferenceValue(6, 0)),
+            )),
+        );
+
+        static::assertEquals(
+            [
+                new PositionedTextElement([new TextSegment(new TextStringValue('(Hi)'), null)], new TransformationMatrix(1, 0, 0, 1, 10.0, 20.0), new TextState(new ExtendedDictionaryKey('F4'), 12, resourceChain: new ResourceDictionaryChain([$pageResources]))),
+            ],
+            $this->paintForm('/Fm1 Do', $formObject, $pageResources),
+        );
+    }
+
+    public function testGetPositionedTextElementsInheritsTextStateIntoFormXObject(): void {
+        // The form never sets a font of its own, so it shows text in the one selected on the page before it is painted.
+        $formObject = $this->formXObject(<<<EOD
+            BT
+            1 0 0 1 10 20 Tm
+            (Hi) Tj
+            ET
+            EOD);
+
+        $pageResources = new Dictionary(
+            new DictionaryEntry(DictionaryKey::XOBJECT, new Dictionary(
+                new DictionaryEntry(new ExtendedDictionaryKey('Fm1'), new ReferenceValue(5, 0)),
+            )),
+        );
+
+        static::assertEquals(
+            [
+                new PositionedTextElement([new TextSegment(new TextStringValue('(Hi)'), null)], new TransformationMatrix(1, 0, 0, 1, 10.0, 20.0), new TextState(new ExtendedDictionaryKey('F4'), 12, resourceChain: new ResourceDictionaryChain([$pageResources]))),
+            ],
+            $this->paintForm("/F4 12 Tf\n/Fm1 Do", $formObject, $pageResources),
+        );
+    }
+
+    public function testGetPositionedTextElementsAppliesFormMatrix(): void {
+        // /Matrix rotates the form a quarter turn, so the text it shows at (10, 20) lands at (-20, 10) on the page.
+        $formObject = $this->formXObject(
+            <<<EOD
+            BT
+            /F4 12 Tf
+            1 0 0 1 10 20 Tm
+            (Hi) Tj
+            ET
+            EOD,
+            new DictionaryEntry(DictionaryKey::MATRIX, new ArrayValue([0, 1, -1, 0, 0, 0])),
+        );
+
+        $pageResources = new Dictionary(
+            new DictionaryEntry(DictionaryKey::XOBJECT, new Dictionary(
+                new DictionaryEntry(new ExtendedDictionaryKey('Fm1'), new ReferenceValue(5, 0)),
+            )),
+        );
+
+        static::assertEquals(
+            [
+                new PositionedTextElement([new TextSegment(new TextStringValue('(Hi)'), null)], new TransformationMatrix(0, 1, -1, 0, -20.0, 10.0), new TextState(new ExtendedDictionaryKey('F4'), 12, resourceChain: new ResourceDictionaryChain([$pageResources]))),
+            ],
+            $this->paintForm('/Fm1 Do', $formObject, $pageResources),
+        );
+    }
+
+    public function testGetPositionedTextElementsBreaksFormXObjectReferenceCycle(): void {
+        // The form paints itself; the text inside it is returned once and the second `Do` is ignored.
+        $formObject = $this->formXObject(<<<EOD
+            BT
+            /F4 12 Tf
+            1 0 0 1 10 20 Tm
+            (Hi) Tj
+            ET
+            /Fm1 Do
+            EOD);
+
+        $pageResources = new Dictionary(
+            new DictionaryEntry(DictionaryKey::XOBJECT, new Dictionary(
+                new DictionaryEntry(new ExtendedDictionaryKey('Fm1'), new ReferenceValue(5, 0)),
+            )),
+        );
+
+        static::assertCount(1, $this->paintForm('/Fm1 Do', $formObject, $pageResources));
+    }
+
+    public function testGetPositionedTextElementsIgnoresNonFormXObject(): void {
+        $imageObject = $this->createMock(XObject::class);
+        $imageObject->method('isForm')->willReturn(false);
+
+        $pageResources = new Dictionary(
+            new DictionaryEntry(DictionaryKey::XOBJECT, new Dictionary(
+                new DictionaryEntry(new ExtendedDictionaryKey('Im1'), new ReferenceValue(5, 0)),
+            )),
+        );
+
+        static::assertSame([], $this->paintForm('/Im1 Do', $imageObject, $pageResources));
+    }
+
+    /** A Form XObject as object nr 5 - the number every /Fm1 reference below points at - with $contentStream as its content, and $dictionaryEntries on top of its /Subtype. */
+    private function formXObject(string $contentStream, DictionaryEntry ...$dictionaryEntries): XObject {
+        $objectItem = self::createStub(ObjectItem::class);
+        $objectItem->method('getDictionary')->willReturn(new Dictionary(
+            new DictionaryEntry(DictionaryKey::SUBTYPE, SubtypeNameValue::FORM),
+            ...array_values($dictionaryEntries),
+        ));
+        $objectItem->method('getContent')->willReturn(FileStream::fromString($contentStream));
+
+        return new XObject(5, $objectItem, self::createStub(Document::class));
+    }
+
+    /**
+     * Walk $pageContentStream with $pageResources in scope, with every reference in it resolving to $xObject.
+     *
+     * @return list<PositionedTextElement>
+     */
+    private function paintForm(string $pageContentStream, XObject $xObject, Dictionary $pageResources): array {
+        $pageObject = $this->createMock(GenericObject::class);
+        $pageObject->expects(self::once())->method('getStream')->willReturn(FileStream::fromString($pageContentStream));
+
+        $document = $this->createMock(Document::class);
+        $document->method('getObject')->willReturn($xObject);
+
+        return ContentStreamParser::parse([$pageObject])
+            ->getPositionedTextElements(
+                new ContentStreamScope($document, new ResourceDictionaryChain([$pageResources])),
+                GraphicsState::initial(new TransformationMatrix(1, 0, 0, 1, 0, 0)),
+            );
     }
 }
