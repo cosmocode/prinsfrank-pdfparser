@@ -11,5 +11,7 @@ creationDate: null
 modificationDate: null
 pages:
   -
-    text: WATERMARK
-    markdown: WATERMARK
+    text: |
+      WATERMARK
+    markdown: |+
+      # WATERMARK

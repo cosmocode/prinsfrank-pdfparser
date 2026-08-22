@@ -315,8 +315,16 @@ class Font extends DecoratedObject {
             || str_contains($baseFont, 'slanted');
     }
 
+    /**
+     * The heading level text of this font shown under $transformationMatrix reads as, or null when it is body text.
+     *
+     * The font size (Tfs) is in text space, so it is scaled onto the page by the length of the matrix's baseline
+     * vector rather than by its scaleX alone: for text rotated off the page axes scaleX is the cosine of the angle,
+     * which shrinks the size towards zero as the text turns and makes it negative past a quarter turn. For upright
+     * text the baseline vector is (scaleX, 0), so its length is scaleX and the size is unchanged.
+     */
     public function getHeadingLevel(TextState $textState, TransformationMatrix $transformationMatrix): ?HeadingLevel {
-        $effectiveFontSize = $textState->getFontSize() * $transformationMatrix->scaleX;
+        $effectiveFontSize = $textState->getFontSize() * $transformationMatrix->baselineVector()->length();
 
         return match (true) {
             $effectiveFontSize >= 30 => HeadingLevel::Level1,
