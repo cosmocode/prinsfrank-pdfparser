@@ -338,8 +338,12 @@ readonly class Font extends DecoratedDictionary {
             || str_contains($baseFont, 'slanted');
     }
 
+    /**
+     * The heading level of text in this font, or null for body text. The font size is scaled by the length of the
+     * baseline vector of the matrix, so the level is the same at any rotation.
+     */
     public function getHeadingLevel(TextState $textState, TransformationMatrix $transformationMatrix): ?HeadingLevel {
-        $effectiveFontSize = $textState->getFontSize() * $transformationMatrix->scaleX;
+        $effectiveFontSize = $textState->getFontSize() * $transformationMatrix->baselineVector()->length();
 
         return match (true) {
             $effectiveFontSize >= 30 => HeadingLevel::Level1,

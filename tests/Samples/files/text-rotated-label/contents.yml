@@ -19,6 +19,7 @@ pages:
       Horizontal heading for reference
        
     markdown: |-
-      ROTATEDLABEL
+      ## ROTATEDLABEL
+
       Horizontal heading for reference
        
