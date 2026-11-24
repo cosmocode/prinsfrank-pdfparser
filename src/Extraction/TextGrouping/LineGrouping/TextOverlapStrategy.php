@@ -3,6 +3,8 @@
 namespace PrinsFrank\PdfParser\Extraction\TextGrouping\LineGrouping;
 
 use PrinsFrank\PdfParser\Document\ContentStream\PositionedText\PositionedTextElement;
+use PrinsFrank\PdfParser\Document\ContentStream\PositionedText\Vector;
+use PrinsFrank\PdfParser\Extraction\TextGrouping\BaselineFrame;
 
 /**
  *    #
@@ -21,13 +23,15 @@ class TextOverlapStrategy {
 
     /**
      * @param list<PositionedTextElement> $positionedTextElements
+     * @param BaselineFrame $frame the axes to measure in; "highest" and "overlap" are measured across its baseline
      * @return iterable<list<PositionedTextElement>>
      */
-    public static function group(array $positionedTextElements): iterable {
-        usort(
-            $positionedTextElements,
-            fn(PositionedTextElement $a, PositionedTextElement $b): int => $b->absoluteMatrix->offsetY <=> $a->absoluteMatrix->offsetY,
-        );
+    public static function group(array $positionedTextElements, BaselineFrame $frame = new BaselineFrame(new Vector(1.0, 0.0))): iterable {
+        $acrossPositions = array_map($frame->across(...), $positionedTextElements);
+        arsort($acrossPositions);
+        $positionedTextElements = array_map(static fn(int $index) => $positionedTextElements[$index], array_keys($acrossPositions));
+        $acrossPositions = array_values($acrossPositions);
+        $alongPositions = array_map($frame->along(...), $positionedTextElements);
 
         /** @var array<int, true> $processedIndices */
         $processedIndices = [];
@@ -47,16 +51,16 @@ class TextOverlapStrategy {
                 continue;
             }
 
-            $highestPositionedTextElementBottom = $highestPositionedTextElement->absoluteMatrix->offsetY;
+            $highestPositionedTextElementBottom = $acrossPositions[$i];
             $highestElementTop = $highestPositionedTextElementBottom + $highestPositionedTextElementHeight;
-            $lineLeftX = $lineRightX = $highestPositionedTextElement->absoluteMatrix->offsetX;
+            $lineLeftX = $lineRightX = $alongPositions[$i];
             for ($j = $i + 1; $j < $nrOfItems; $j++) {
                 if ($processedIndices[$j] ?? false) {
                     continue;
                 }
 
                 $positionedTextElement = $positionedTextElements[$j];
-                $currentElementBottom = $positionedTextElement->absoluteMatrix->offsetY;
+                $currentElementBottom = $acrossPositions[$j];
                 $currentHeight = $positionedTextElement->getHeight();
                 $currentElementTop = $currentElementBottom + $currentHeight;
                 if ($currentElementTop < $highestPositionedTextElementBottom) {
@@ -72,7 +76,7 @@ class TextOverlapStrategy {
                     continue;
                 }
 
-                $offsetX = $positionedTextElement->absoluteMatrix->offsetX;
+                $offsetX = $alongPositions[$j];
                 if ($overlap / min($currentHeight, $highestPositionedTextElementHeight) >= self::OVERLAP_RATIO
                     || ($currentHeight < $highestPositionedTextElementHeight && $offsetX >= $lineLeftX && $offsetX <= $lineRightX)) {
                     $positionedTextElementsOnLine[] = $positionedTextElement;
@@ -84,7 +88,7 @@ class TextOverlapStrategy {
 
             usort(
                 $positionedTextElementsOnLine,
-                static fn(PositionedTextElement $a, PositionedTextElement $b): int => $a->absoluteMatrix->offsetX <=> $b->absoluteMatrix->offsetX,
+                static fn(PositionedTextElement $a, PositionedTextElement $b): int => $frame->along($a) <=> $frame->along($b),
             );
 
             yield $positionedTextElementsOnLine;
