@@ -47,9 +47,8 @@ pages:
       Alleen invullen als u in het 
       buitenland woont .
       f Geboortedatum (dd-mm-jjjj)
+      LH  - Z*FOL  
          
-      LH  - Z*FOL 
-       
       *060081201*
       
     markdown: |-
@@ -87,9 +86,8 @@ pages:
       *Alleen invullen als u in het* 
       *buitenland woont .*
       f Geboortedatum *(dd-mm-jjjj)*
+      LH  - Z*FOL  
          
-      LH  - Z*FOL 
-       
       #### *060081201*
 
       

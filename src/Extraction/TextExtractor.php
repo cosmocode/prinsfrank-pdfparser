@@ -5,7 +5,7 @@ namespace PrinsFrank\PdfParser\Extraction;
 use PrinsFrank\PdfParser\Document\ContentStream\PositionedText\PositionedTextElement;
 use PrinsFrank\PdfParser\Exception\PdfParserException;
 use PrinsFrank\PdfParser\Extraction\SpaceDetection\SpaceDetector;
-use PrinsFrank\PdfParser\Extraction\TextGrouping\ColumnGrouping\ColumnGroupingStrategy;
+use PrinsFrank\PdfParser\Extraction\TextGrouping\BaselineClusterStrategy;
 
 class TextExtractor {
     /**
@@ -14,7 +14,7 @@ class TextExtractor {
      */
     public static function extractContent(array $positionedTextElements): string {
         $textBuffer = '';
-        foreach (ColumnGroupingStrategy::group($positionedTextElements) as $i => $positionedTextElementsForLine) {
+        foreach (BaselineClusterStrategy::group($positionedTextElements) as $i => $positionedTextElementsForLine) {
             if ($i !== 0) {
                 $textBuffer .= "\n";
             }

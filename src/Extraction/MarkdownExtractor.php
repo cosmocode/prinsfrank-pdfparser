@@ -16,7 +16,7 @@ use PrinsFrank\PdfParser\Document\ContentStream\PositionedText\PositionedTextEle
 use PrinsFrank\PdfParser\Document\Dictionary\Decorator\Annotation;
 use PrinsFrank\PdfParser\Exception\PdfParserException;
 use PrinsFrank\PdfParser\Extraction\SpaceDetection\SpaceDetector;
-use PrinsFrank\PdfParser\Extraction\TextGrouping\ColumnGrouping\ColumnGroupingStrategy;
+use PrinsFrank\PdfParser\Extraction\TextGrouping\BaselineClusterStrategy;
 
 class MarkdownExtractor {
     /**
@@ -31,7 +31,7 @@ class MarkdownExtractor {
         $textBuffer = '';
         $previousElementIsBold = $previousElementIsItalic = false;
         $previousHeadingLevel = $previousLinkUrl = null;
-        foreach (ColumnGroupingStrategy::group($positionedTextElements) as $i => $positionedTextElementsForLine) {
+        foreach (BaselineClusterStrategy::group($positionedTextElements) as $i => $positionedTextElementsForLine) {
             if ($i !== 0) {
                 if ($previousHeadingLevel !== null) {
                     self::flushInLineNodes($inLineNodes, $textBuffer, $previousElementIsBold, $previousElementIsItalic, $previousLinkUrl);

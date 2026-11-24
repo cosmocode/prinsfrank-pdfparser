@@ -53,7 +53,7 @@ readonly class PositionedTextElement {
         }
 
         return $this->heightCache = ($this->textState->getFontSize())
-            * abs($this->absoluteMatrix->scaleY)
+            * hypot($this->absoluteMatrix->shearY, $this->absoluteMatrix->scaleY) // Length of the glyph's vertical axis, so rotated text keeps its height
             * ($this->textState->scale / 100);
     }
 
