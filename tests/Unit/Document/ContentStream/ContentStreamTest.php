@@ -6,6 +6,7 @@ use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
 use PrinsFrank\PdfParser\Document\ContentStream\ContentStream;
 use PrinsFrank\PdfParser\Document\ContentStream\ContentStreamParser;
+use PrinsFrank\PdfParser\Document\ContentStream\PositionedText\GraphicsState;
 use PrinsFrank\PdfParser\Document\ContentStream\PositionedText\PositionedTextElement;
 use PrinsFrank\PdfParser\Document\ContentStream\PositionedText\TextSegment\TextSegment;
 use PrinsFrank\PdfParser\Document\ContentStream\PositionedText\TextState;
@@ -162,7 +163,7 @@ class ContentStreamTest extends TestCase {
                 new PositionedTextElement([new TextSegment(null, new HexadecimalStringValue('0003'))], new TransformationMatrix(0.75, 0, 0, 0.75, 200.80728, 730.5896001075), new TextState($fontMock, 14.666667)),
                 new PositionedTextElement([new TextSegment(null, new HexadecimalStringValue('0003'))], new TransformationMatrix(0.75, 0, 0, 0.75, 72.0, 716.0433351075001), new TextState($fontMock, 14.666667)),
             ],
-            ContentStreamParser::parse([$object])->getPositionedTextElements($page, null, new TransformationMatrix(1, 0, 0, 1, 0, 0), []),
+            ContentStreamParser::parse([$object])->getPositionedTextElements($page, null, GraphicsState::initial(new TransformationMatrix(1, 0, 0, 1, 0, 0)), []),
         );
     }
 
@@ -186,7 +187,7 @@ class ContentStreamTest extends TestCase {
                 new PositionedTextElement([new TextSegment(null, new LiteralStringValue('[Hello'))], new TransformationMatrix(1.0, 0, 0, 1.0, 0.0, 0.0), new TextState($fontMock, 7)),
                 new PositionedTextElement([new TextSegment(null, new LiteralStringValue('World]'))], new TransformationMatrix(1.0, 0, 0, 1.0, 0.0, 0.0), new TextState($fontMock, 7)),
             ],
-            ContentStreamParser::parse([$object])->getPositionedTextElements($page, null, new TransformationMatrix(1, 0, 0, 1, 0, 0), []),
+            ContentStreamParser::parse([$object])->getPositionedTextElements($page, null, GraphicsState::initial(new TransformationMatrix(1, 0, 0, 1, 0, 0)), []),
         );
     }
 }

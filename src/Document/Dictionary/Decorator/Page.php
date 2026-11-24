@@ -5,6 +5,7 @@ namespace PrinsFrank\PdfParser\Document\Dictionary\Decorator;
 use PrinsFrank\MarkDownDom\Renderer\MarkdownRenderer;
 use PrinsFrank\PdfParser\Document\ContentStream\ContentStream;
 use PrinsFrank\PdfParser\Document\ContentStream\ContentStreamParser;
+use PrinsFrank\PdfParser\Document\ContentStream\PositionedText\GraphicsState;
 use PrinsFrank\PdfParser\Document\ContentStream\PositionedText\PositionedTextElement;
 use PrinsFrank\PdfParser\Document\ContentStream\PositionedText\TransformationMatrix;
 use PrinsFrank\PdfParser\Document\Dictionary\Dictionary;
@@ -26,7 +27,7 @@ readonly class Page extends DecoratedDictionary {
      */
     public function getPositionedTextElements(): array {
         return $this->getContentStream()
-            ?->getPositionedTextElements($this, null, new TransformationMatrix(1, 0, 0, 1, 0, 0), []) ?? [];
+            ?->getPositionedTextElements($this, null, GraphicsState::initial(new TransformationMatrix(1, 0, 0, 1, 0, 0)), []) ?? [];
     }
 
     /** @throws PdfParserException */

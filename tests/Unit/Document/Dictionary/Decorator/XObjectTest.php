@@ -4,10 +4,12 @@ namespace PrinsFrank\PdfParser\Tests\Unit\Document\Dictionary\Decorator;
 
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
+use PrinsFrank\PdfParser\Document\ContentStream\PositionedText\TransformationMatrix;
 use PrinsFrank\PdfParser\Document\Dictionary\Decorator\XObject;
 use PrinsFrank\PdfParser\Document\Dictionary\Dictionary;
 use PrinsFrank\PdfParser\Document\Dictionary\DictionaryEntry\DictionaryEntry;
 use PrinsFrank\PdfParser\Document\Dictionary\DictionaryKey\DictionaryKey;
+use PrinsFrank\PdfParser\Document\Dictionary\DictionaryValue\Array\ArrayValue;
 use PrinsFrank\PdfParser\Document\Dictionary\DictionaryValue\Integer\IntegerValue;
 use PrinsFrank\PdfParser\Document\Dictionary\DictionaryValue\Name\SubtypeNameValue;
 
@@ -123,6 +125,27 @@ class XObjectTest extends TestCase {
         static::assertNull(
             (new XObject(new Dictionary(null)))
                 ->getLength(),
+        );
+    }
+
+    public function testGetMatrix(): void {
+        $dictionary = new Dictionary(
+            null,
+            new DictionaryEntry(DictionaryKey::MATRIX, new ArrayValue([0, 1, -1, 0, '72.5', 400])),
+        );
+
+        static::assertEquals(
+            new TransformationMatrix(0, 1, -1, 0, 72.5, 400),
+            (new XObject($dictionary))
+                ->getMatrix(),
+        );
+    }
+
+    public function testGetMatrixWithoutSixNumbers(): void {
+        static::assertNull((new XObject(new Dictionary(null)))->getMatrix());
+        static::assertNull(
+            (new XObject(new Dictionary(null, new DictionaryEntry(DictionaryKey::MATRIX, new ArrayValue([1, 0, 0, 1])))))
+                ->getMatrix(),
         );
     }
 }

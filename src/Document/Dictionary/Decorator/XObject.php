@@ -4,6 +4,7 @@ namespace PrinsFrank\PdfParser\Document\Dictionary\Decorator;
 
 use Override;
 use PrinsFrank\PdfParser\Document\ContentStream\ContentStreamParser;
+use PrinsFrank\PdfParser\Document\ContentStream\PositionedText\GraphicsState;
 use PrinsFrank\PdfParser\Document\ContentStream\PositionedText\PositionedTextElement;
 use PrinsFrank\PdfParser\Document\ContentStream\PositionedText\TransformationMatrix;
 use PrinsFrank\PdfParser\Document\Dictionary\Dictionary;
@@ -156,16 +157,46 @@ readonly class XObject extends DecoratedDictionary {
     }
 
     /**
+     * The matrix that maps the coordinate space of this form onto the space it is painted in, or null when the form has
+     * no /Matrix of six numbers.
+     *
+     * @throws PdfParserException
+     */
+    public function getMatrix(): ?TransformationMatrix {
+        $matrix = $this->getValueForKey(DictionaryKey::MATRIX, ArrayValue::class);
+        if ($matrix === null || count($matrix->value) !== 6) {
+            return null;
+        }
+
+        $values = [];
+        foreach ($matrix->value as $value) {
+            if (!is_int($value) && !is_string($value)) {
+                return null;
+            }
+
+            $values[] = (float) $value;
+        }
+
+        return new TransformationMatrix($values[0], $values[1], $values[2], $values[3], $values[4], $values[5]);
+    }
+
+    /**
+     * The text shown inside this Form XObject. It starts from the graphics state in effect where the form is painted
+     * (ISO 32000-1:2008 §8.10.1), with the /Matrix of the form applied on top of the matrix of that state.
+     *
+     * @param GraphicsState $state the state in effect where the form is painted
      * @param list<int> $visitedObjectIds
      * @return list<PositionedTextElement>
      */
-    public function getPositionedTextElements(TransformationMatrix $transformationMatrix, ?Page $parent, array $visitedObjectIds): array {
+    public function getPositionedTextElements(GraphicsState $state, ?Page $parent, array $visitedObjectIds): array {
         if ($this->isForm() === false || $this->dictionary->object === null) {
             return [];
         }
 
+        $matrix = $this->getMatrix() ?? new TransformationMatrix(1, 0, 0, 1, 0, 0);
+
         return ContentStreamParser::parse([$this->dictionary->object])
-            ->getPositionedTextElements($this, $parent, $transformationMatrix, $visitedObjectIds);
+            ->getPositionedTextElements($this, $parent, $state->withCtm($matrix->multiplyWith($state->ctm)), $visitedObjectIds);
     }
 
     /** @throws PdfParserException */

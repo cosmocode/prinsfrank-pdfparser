@@ -32,12 +32,12 @@ readonly class ContentStream {
     }
 
     /**
+     * @param GraphicsState $state the state the stream is painted in
      * @param list<int> $visitedObjectIds
      * @return list<PositionedTextElement>
      */
-    public function getPositionedTextElements(Page|XObject $context, ?Page $parent, TransformationMatrix $transformationMatrix, array $visitedObjectIds): array {
+    public function getPositionedTextElements(Page|XObject $context, ?Page $parent, GraphicsState $state, array $visitedObjectIds): array {
         $positionedTextElements = $stack = [];
-        $state = GraphicsState::initial($transformationMatrix);
         $colorState = new ColorState();
         foreach ($this->content as $content) {
             if ($content instanceof ContentStreamCommand) {
@@ -60,7 +60,7 @@ readonly class ContentStream {
                 }
 
                 if ($content->operator instanceof IncludesXObjects) {
-                    $positionedTextElements = [...$positionedTextElements, ...$content->operator->getPositionedTextElements($content->operands, $state->ctm, $context, $visitedObjectIds)];
+                    $positionedTextElements = [...$positionedTextElements, ...$content->operator->getPositionedTextElements($content->operands, $state, $context, $visitedObjectIds)];
                 }
 
                 continue;
